@@ -115,6 +115,16 @@
       background: #075E54;
     }
 
+    .btn-toggle {
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+
+    .btn-toggle:hover {
+      background: #e0e0e0;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -186,7 +196,6 @@
       font-size: 16px;
     }
 
-    /* मास्टर पेज के लिए नया लेफ्ट-राइट ग्रिड डिज़ाइन */
     .master-grid {
       display: flex;
       gap: 20px;
@@ -207,15 +216,38 @@
       margin-top: 0;
     }
 
-    /* मोबाइल फ्रेंडली सेटिंग्स */
-    @media (max-width: 768px) {
+    /* चेकबॉक्स लिस्ट का डिज़ाइन */
+    .bill-list-container {
+      background: #eef5fa;
+      padding: 10px 15px;
+      border-top: 1px solid #cce0f0;
+      display: none;
+    }
 
-      /* 1. मोबाइल स्क्रीन पर अपलोड और क्लियर डेटा सेक्शन को छिपाना */
+    .bill-list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px dashed #ccc;
+      cursor: pointer;
+    }
+
+    .bill-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .bill-list-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
       .action-bar {
         display: none !important;
       }
 
-      /* मोबाइल पर टेबल को कार्ड में बदलना */
       table,
       thead,
       tbody,
@@ -268,6 +300,7 @@
         justify-content: space-between;
         padding-left: 15px;
         background: #fafafa;
+        flex-wrap: wrap;
       }
 
       td.actions::before {
@@ -276,17 +309,25 @@
 
       td.actions button {
         flex: 1;
-        padding: 12px;
-        font-size: 15px;
+        padding: 10px;
+        font-size: 14px;
+        min-width: 80px;
       }
 
-      /* मोबाइल स्क्रीन पर लेफ्ट-राइट लेआउट को वापस ऊपर-नीचे करना ताकि स्क्रीन छोटी न पड़े */
       .master-grid {
         flex-direction: column;
       }
 
       .master-column {
         width: 100%;
+      }
+
+      td.sub-row-cell {
+        padding: 0 !important;
+      }
+
+      td.sub-row-cell::before {
+        display: none;
       }
     }
   </style>
@@ -325,10 +366,8 @@
       <thead>
         <tr>
           <th>Party</th>
-          <th>Bill No</th>
-          <th>Date</th>
-          <th>Amount</th>
-          <th>Days</th>
+          <th>Selected Bills</th>
+          <th>Total Amount</th>
           <th>Broker</th>
           <th>Action</th>
         </tr>
@@ -514,70 +553,173 @@
       return matches;
     }
 
+    window.updateDynamicTotal = function (safeKey, totalBillsCount) {
+      let checkboxes = document.querySelectorAll(`.chk-${safeKey}:checked`);
+      let total = 0;
+
+      checkboxes.forEach(chk => {
+        let amt = parseFloat(chk.getAttribute('data-amt'));
+        if (!isNaN(amt)) total += amt;
+      });
+
+      let totalTd = document.getElementById(`total-${safeKey}`);
+      if (totalTd) {
+        totalTd.innerText = `₹${total.toFixed(2)}`;
+      }
+
+      let countTd = document.getElementById(`count-${safeKey}`);
+      if (countTd) {
+        countTd.innerText = `${checkboxes.length} / ${totalBillsCount} Bill(s)`;
+      }
+    }
+
     function renderTable() {
       let tbody = document.querySelector("#dataTable tbody");
       if (!tbody) return;
       tbody.innerHTML = "";
 
       if (!billData || billData.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>No data available. Please upload a CSV from PC.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No data available. Please upload a CSV from PC.</td></tr>";
         return;
       }
 
+      let groupedData = {};
+
       billData.forEach(item => {
-        let days = calcDays(item.date);
+        let pName = item.party.trim();
+        if (!groupedData[pName]) {
+          groupedData[pName] = { party: pName, broker: item.broker || "", bills: [] };
+        }
+        groupedData[pName].bills.push({ bill: item.bill, date: item.date, amount: item.amount, days: calcDays(item.date) });
+      });
+
+      for (let key in groupedData) {
+        let item = groupedData[key];
+        let safeKey = key.replace(/\W/g, '');
+
+        // Main Row
         let tr = document.createElement("tr");
+        tr.className = "main-row";
+        tr.setAttribute("data-party", item.party);
+        tr.setAttribute("data-key", safeKey);
+
+        let toggleBtn = document.createElement("button");
+        toggleBtn.textContent = "▼ Show Bills";
+        toggleBtn.className = "btn-toggle";
+        toggleBtn.onclick = function () {
+          let subRow = document.getElementById("subrow-" + safeKey);
+          if (subRow.style.display === "none" || subRow.style.display === "") {
+            subRow.style.display = "block";
+            toggleBtn.textContent = "▲ Hide Bills";
+          } else {
+            subRow.style.display = "none";
+            toggleBtn.textContent = "▼ Show Bills";
+          }
+        };
 
         let pbtn = document.createElement("button");
         pbtn.textContent = "Party 💬";
         pbtn.className = "btn-send-party";
         pbtn.onclick = async function () {
-          let mobile = partyMaster[item.party];
-          if (!mobile) {
-            mobile = await askMobileNumber(`Enter Number for: ${item.party}`);
-            if (!mobile) return;
-            mobile = mobile.replace(/\D/g, '');
-            if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
-            if (mobile.length > 10) mobile = mobile.slice(-10);
-            await set(ref(db, "partyMaster/" + item.party), mobile);
-          }
-          send(mobile, 'party', item.party, item.party, item.bill, item.date, item.amount, days);
+          sendSelectedBills(item.party, item.broker, 'party', safeKey, item.bills);
         }
 
         let bbtn = document.createElement("button");
         bbtn.textContent = "Broker 💬";
         bbtn.className = "btn-send-broker";
         bbtn.onclick = async function () {
-          if (!item.broker) { alert("Broker not found for this entry"); return; }
-          let mobile = brokerMaster[item.broker];
-          if (!mobile) {
-            mobile = await askMobileNumber(`Enter Number for Broker: ${item.broker}`);
-            if (!mobile) return;
-            mobile = mobile.replace(/\D/g, '');
-            if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
-            if (mobile.length > 10) mobile = mobile.slice(-10);
-            await set(ref(db, "brokerMaster/" + item.broker), mobile);
-          }
-          send(mobile, 'broker', item.broker, item.party, item.bill, item.date, item.amount, days);
+          sendSelectedBills(item.party, item.broker, 'broker', safeKey, item.bills);
         }
 
         tr.innerHTML = `
-            <td data-label="Party">${item.party}</td>
-            <td data-label="Bill No">${item.bill}</td>
-            <td data-label="Date">${item.date}</td>
-            <td data-label="Amount">₹${item.amount}</td>
-            <td data-label="Pending Days">${days}</td>
+            <td data-label="Party"><strong>${item.party}</strong></td>
+            <td data-label="Selected Bills" id="count-${safeKey}">0 / ${item.bills.length} Bill(s)</td>
+            <td data-label="Total Amount" style="color:#d9534f; font-weight:bold;" id="total-${safeKey}">₹0.00</td>
             <td data-label="Broker">${item.broker || '-'}</td>
         `;
 
         let tdActions = document.createElement("td");
         tdActions.className = "actions";
+        tdActions.appendChild(toggleBtn);
         tdActions.appendChild(pbtn);
         tdActions.appendChild(bbtn);
         tr.appendChild(tdActions);
 
         tbody.appendChild(tr);
+
+        // Sub Row
+        let trSub = document.createElement("tr");
+        trSub.id = "trsub-" + safeKey;
+        let tdSub = document.createElement("td");
+        tdSub.colSpan = 5;
+        tdSub.className = "sub-row-cell";
+
+        let subContainer = document.createElement("div");
+        subContainer.id = "subrow-" + safeKey;
+        subContainer.className = "bill-list-container";
+
+        let checkHTML = "";
+        item.bills.forEach((b, idx) => {
+          let cleanAmt = b.amount.toString().replace(/,/g, '');
+          checkHTML += `
+                <label class="bill-list-item">
+                    <input type="checkbox" class="chk-${safeKey}" data-idx="${idx}" data-amt="${cleanAmt}" onchange="updateDynamicTotal('${safeKey}', ${item.bills.length})">
+                    <span><strong>Bill:</strong> ${b.bill} | <strong>Date:</strong> ${b.date} | <strong>Amt:</strong> ₹${b.amount} (${b.days} Days)</span>
+                </label>
+            `;
+        });
+        subContainer.innerHTML = checkHTML;
+        tdSub.appendChild(subContainer);
+        trSub.appendChild(tdSub);
+
+        tbody.appendChild(trSub);
+      }
+    }
+
+    async function sendSelectedBills(partyName, brokerName, type, safeKey, allBills) {
+      let checkboxes = document.querySelectorAll(`.chk-${safeKey}:checked`);
+
+      if (checkboxes.length === 0) {
+        alert("कृपया भेजने के लिए कम से कम एक बिल सेलेक्ट करें!");
+        return;
+      }
+
+      let selectedBills = [];
+      let selectedTotal = 0;
+
+      checkboxes.forEach(chk => {
+        let idx = parseInt(chk.getAttribute('data-idx'));
+        let b = allBills[idx];
+        selectedBills.push(b);
+        let amt = parseFloat(b.amount.toString().replace(/,/g, ''));
+        if (!isNaN(amt)) selectedTotal += amt;
       });
+
+      let mobile = "";
+      if (type === 'party') {
+        mobile = partyMaster[partyName];
+        if (!mobile) {
+          mobile = await askMobileNumber(`Enter Number for: ${partyName}`);
+          if (!mobile) return;
+          mobile = mobile.replace(/\D/g, '');
+          if (mobile.length < 10) { alert("कृपया सही 10 अंकों का মোবাইল नंबर दर्ज करें।"); return; }
+          if (mobile.length > 10) mobile = mobile.slice(-10);
+          await set(ref(db, "partyMaster/" + partyName), mobile);
+        }
+        sendToWhatsApp(mobile, type, partyName, partyName, selectedBills, selectedTotal);
+      } else {
+        if (!brokerName) { alert("Broker not found for this entry"); return; }
+        mobile = brokerMaster[brokerName];
+        if (!mobile) {
+          mobile = await askMobileNumber(`Enter Number for Broker: ${brokerName}`);
+          if (!mobile) return;
+          mobile = mobile.replace(/\D/g, '');
+          if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
+          if (mobile.length > 10) mobile = mobile.slice(-10);
+          await set(ref(db, "brokerMaster/" + brokerName), mobile);
+        }
+        sendToWhatsApp(mobile, type, brokerName, partyName, selectedBills, selectedTotal);
+      }
     }
 
     document.getElementById("fileInput").addEventListener("change", async function (e) {
@@ -586,7 +728,7 @@
       let reader = new FileReader();
 
       reader.onload = async function (ev) {
-        document.querySelector("#dataTable tbody").innerHTML = "<tr><td colspan='7' style='text-align:center;'>Uploading Data to Cloud... Please wait.</td></tr>";
+        document.querySelector("#dataTable tbody").innerHTML = "<tr><td colspan='5' style='text-align:center;'>Uploading Data to Cloud... Please wait.</td></tr>";
 
         let text = ev.target.result;
         let delimiter = text.includes(";") ? ";" : ",";
@@ -624,21 +766,25 @@
       reader.readAsText(file);
     });
 
-    window.send = function (mobile, type, receiverName, partyName, bill, date, amount, days) {
+    window.sendToWhatsApp = function (mobile, type, receiverName, partyName, bills, totalAmount) {
       let msg = "";
-      let formattedAmount = parseFloat(amount.replace(/,/g, '')).toFixed(2);
+      let formattedTotal = totalAmount.toFixed(2);
+
+      let billsText = bills.map((b, index) =>
+        `${index + 1}. बिल नं: ${b.bill} | दिनांक: ${b.date} | राशि: ₹${parseFloat(b.amount.toString().replace(/,/g, '')).toFixed(2)} (${b.days} दिन)`
+      ).join('\n');
 
       if (type === 'broker') {
         msg = `नमस्ते ${receiverName},
 
-हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पार्टी के पेमेंट का रिमाइंडर है। कृपया इस पार्टी से पेमेंट करवाने का निवेदन करें:
+हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पार्टी के पेमेंट का रिमाइंडर है। कृपया इस पार्टी से पेमेंट करवाने का कष्ट करें:
 
 पार्टी का नाम: ${partyName}
-बिल नं: ${bill}
-दिनांक: ${date}
-राशि: ₹${formattedAmount}
 
-यह भुगतान ${days} दिनों से लंबित है।
+*लंबित बिलों का विवरण:*
+${billsText}
+
+*कुल बकाया राशि: ₹${formattedTotal}*
 
 ------------------
 Bank: SBI
@@ -654,13 +800,16 @@ RAVI KUMAR DEEPAK KUMAR`;
       } else {
         msg = `नमस्ते ${receiverName},
 
-हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पेमेंट रिमाइंडर है।
+हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पेमेंट रिमाइंडर है। 
 
-आपका बिल नं: ${bill}
-दिनांक: ${date}
-राशि: ₹${formattedAmount}
+आपके निम्नलिखित बिल भुगतान के लिए लंबित हैं:
 
-यह भुगतान ${days} दिनों से लंबित है। कृपया नीचे दी गई डिटेल्स पर तुरंत भुगतान करें:
+*लंबित बिलों का विवरण:*
+${billsText}
+
+*कुल बकाया राशि: ₹${formattedTotal}*
+
+कृपया नीचे दी गई डिटेल्स पर तुरंत भुगतान करें:
 
 ------------------
 Bank: SBI
@@ -677,13 +826,35 @@ RAVI KUMAR DEEPAK KUMAR`;
       window.open("https://wa.me/91" + mobile + "?text=" + encodeURIComponent(msg));
     }
 
+    // नया स्मार्ट सर्च फ़िल्टर
     window.filterTable = function () {
       let input = document.getElementById("searchBox").value.toLowerCase();
-      let rows = document.querySelectorAll("#dataTable tbody tr");
-      rows.forEach(r => {
-        let party = r.children[0].innerText.toLowerCase();
-        r.style.display = party.includes(input) ? "" : "none";
+      let mainRows = document.querySelectorAll("#dataTable tbody tr.main-row");
+      let firstMatch = null;
+
+      mainRows.forEach(tr => {
+        let party = tr.getAttribute("data-party").toLowerCase();
+        let safeKey = tr.getAttribute("data-key");
+        let subRow = document.getElementById("trsub-" + safeKey);
+
+        if (party.includes(input)) {
+          tr.style.display = "";
+          if (subRow) subRow.style.display = "";
+
+          // अगर इनपुट खाली नहीं है, तो पहले रिजल्ट को सेव कर लें
+          if (input !== "" && !firstMatch) {
+            firstMatch = tr;
+          }
+        } else {
+          tr.style.display = "none";
+          if (subRow) subRow.style.display = "none";
+        }
       });
+
+      // रिजल्ट मिलने पर स्क्रीन को अपने-आप वहाँ स्क्रॉल करना
+      if (firstMatch) {
+        firstMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
 
     window.clearFirebaseData = async function () {
