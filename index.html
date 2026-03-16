@@ -1,393 +1,664 @@
-
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payment Reminder Tool (Firebase)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Payment Reminder Tool</title>
 
-<style>
-body{font-family:Arial;background:#f4f6f8;padding:15px}
-.nav a{margin-right:15px;font-weight:bold;text-decoration:none}
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
-th,td{border-bottom:1px solid #ddd;padding:8px;text-align:left}
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f6f8;
+      padding: 10px;
+      margin: 0;
+    }
 
-button{
-padding:6px 10px;
-background:#0b79d0;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer
-}
+    .nav {
+      display: flex;
+      gap: 10px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      margin-bottom: 15px;
+      overflow-x: auto;
+    }
 
-button:hover{background:#095a9c}
+    .nav a {
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+      color: #0b79d0;
+      padding: 8px 12px;
+      border-radius: 5px;
+      white-space: nowrap;
+      transition: 0.3s;
+    }
 
-input{
-padding:6px;
-margin:5px 0;
-width:260px
-}
+    .nav a:hover,
+    .nav a.active {
+      background: #e9f2fa;
+    }
 
-/* Mobile responsive */
-@media(max-width:700px){
+    h2,
+    h3 {
+      color: #333;
+      margin-top: 0;
+    }
 
-table, thead, tbody, th, td, tr{
-display:block;
-width:100%;
-}
+    input[type="text"],
+    input[type="file"],
+    input[type="tel"] {
+      padding: 12px;
+      margin: 5px 0;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
 
-thead{
-display:none;
-}
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
 
-tr{
-background:#fff;
-margin-bottom:12px;
-padding:10px;
-border-radius:8px;
-box-shadow:0 2px 5px rgba(0,0,0,0.1)
-}
+    button {
+      padding: 10px 15px;
+      background: #0b79d0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
 
-td{
-border:none;
-padding:4px 0;
-}
+    button:hover {
+      background: #095a9c;
+    }
 
-}
-</style>
+    .btn-danger {
+      background: #d9534f;
+    }
+
+    .btn-danger:hover {
+      background: #c9302c;
+    }
+
+    .btn-send-party {
+      background: #25D366;
+    }
+
+    .btn-send-party:hover {
+      background: #1ebe5d;
+    }
+
+    .btn-send-broker {
+      background: #128C7E;
+    }
+
+    .btn-send-broker:hover {
+      background: #075E54;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      margin-top: 10px;
+    }
+
+    thead {
+      background: #0b79d0;
+      color: white;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #eee;
+      padding: 12px;
+      text-align: left;
+    }
+
+    #customPrompt {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 350px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-content h3 {
+      margin-bottom: 15px;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .modal-content input {
+      text-align: center;
+      font-size: 18px;
+      letter-spacing: 2px;
+      font-weight: bold;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-buttons button {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+    }
+
+    /* मास्टर पेज के लिए नया लेफ्ट-राइट ग्रिड डिज़ाइन */
+    .master-grid {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .master-column {
+      flex: 1;
+      width: 50%;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .master-column table {
+      box-shadow: none;
+      margin-top: 0;
+    }
+
+    /* मोबाइल फ्रेंडली सेटिंग्स */
+    @media (max-width: 768px) {
+
+      /* 1. मोबाइल स्क्रीन पर अपलोड और क्लियर डेटा सेक्शन को छिपाना */
+      .action-bar {
+        display: none !important;
+      }
+
+      /* मोबाइल पर टेबल को कार्ड में बदलना */
+      table,
+      thead,
+      tbody,
+      th,
+      td,
+      tr {
+        display: block;
+        width: 100%;
+      }
+
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+
+      tr {
+        background: #fff;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border: 1px solid #ddd;
+        overflow: hidden;
+      }
+
+      td {
+        border: none;
+        padding: 10px 15px;
+        position: relative;
+        padding-left: 45%;
+        text-align: left;
+        border-bottom: 1px solid #f9f9f9;
+      }
+
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: 40%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: bold;
+        color: #555;
+      }
+
+      td.actions {
+        padding: 15px;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        padding-left: 15px;
+        background: #fafafa;
+      }
+
+      td.actions::before {
+        display: none;
+      }
+
+      td.actions button {
+        flex: 1;
+        padding: 12px;
+        font-size: 15px;
+      }
+
+      /* मोबाइल स्क्रीन पर लेफ्ट-राइट लेआउट को वापस ऊपर-नीचे करना ताकि स्क्रीन छोटी न पड़े */
+      .master-grid {
+        flex-direction: column;
+      }
+
+      .master-column {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="nav">
-<a href="#" onclick="showPage('reminder')">Reminder</a>
-<a href="#" onclick="showPage('master')">Mobile Master</a>
-</div>
-
-<div id="reminderPage">
-
-<h2>Upload CSV</h2>
-<input type="file" id="fileInput">
-
-<br>
-<input type="text" id="searchBox" placeholder="Search Party..." onkeyup="filterTable()">
-
-<table id="dataTable">
-<thead>
-<tr>
-<th>Party</th>
-<th>Bill</th>
-<th>Date</th>
-<th>Amount</th>
-<th>Days</th>
-<th>Broker</th>
-<th>Party</th>
-<th>Broker</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
-</div>
-
-
-<div id="masterPage" style="display:none">
-
-<h3>Party Mobile Master</h3>
-<table id="partyTable">
-<thead>
-<tr><th>Party</th><th>Mobile</th><th>Edit</th><th>Delete</th></tr>
-</thead>
-<tbody></tbody>
-</table>
-
-<h3>Broker Mobile Master</h3>
-<table id="brokerTable">
-<thead>
-<tr><th>Broker</th><th>Mobile</th><th>Edit</th><th>Delete</th></tr>
-</thead>
-<tbody></tbody>
-</table>
-
-</div>
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDYePa9Ef2i3p68nd0Hu5biprCDIDSGZcE",
-  authDomain: "payment-reminder-76a1b.firebaseapp.com",
-  projectId: "payment-reminder-76a1b",
-  storageBucket: "payment-reminder-76a1b.firebasestorage.app",
-  messagingSenderId: "545778828368",
-  appId: "1:545778828368:web:b2e129c8a1d4d2816ffd55",
-  databaseURL: "https://payment-reminder-76a1b-default-rtdb.firebaseio.com"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-let partyMaster = {}
-let brokerMaster = {}
-
-function showPage(p){
-document.getElementById("reminderPage").style.display = p=="reminder"?"block":"none"
-document.getElementById("masterPage").style.display = p=="master"?"block":"none"
-renderMasters()
-}
-
-function loadMasters(){
-
-onValue(ref(db,"partyMaster"),snap=>{
-partyMaster = snap.val() || {}
-renderMasters()
-})
-
-onValue(ref(db,"brokerMaster"),snap=>{
-brokerMaster = snap.val() || {}
-renderMasters()
-})
-
-}
-
-function renderMasters(){
-
-let pbody=document.querySelector("#partyTable tbody")
-pbody.innerHTML=""
-
-for(let p in partyMaster){
-
-let tr=document.createElement("tr")
-
-tr.innerHTML="<td>"+p+"</td><td>"+partyMaster[p]+"</td>"
-
-let edit=document.createElement("button")
-edit.textContent="Edit"
-edit.onclick=async function(){
-
-let newMobile=prompt("Edit mobile",partyMaster[p])
-if(!newMobile) return
-
-await set(ref(db,"partyMaster/"+p),newMobile)
-
-}
-
-let del=document.createElement("button")
-del.textContent="Delete"
-del.onclick=async function(){
-
-await remove(ref(db,"partyMaster/"+p))
-
-}
-
-let td1=document.createElement("td")
-td1.appendChild(edit)
-
-let td2=document.createElement("td")
-td2.appendChild(del)
-
-tr.appendChild(td1)
-tr.appendChild(td2)
-
-pbody.appendChild(tr)
-
-}
-
-
-let bbody=document.querySelector("#brokerTable tbody")
-bbody.innerHTML=""
-
-for(let b in brokerMaster){
-
-let tr=document.createElement("tr")
-
-tr.innerHTML="<td>"+b+"</td><td>"+brokerMaster[b]+"</td>"
-
-let edit=document.createElement("button")
-edit.textContent="Edit"
-edit.onclick=async function(){
-
-let newMobile=prompt("Edit mobile",brokerMaster[b])
-if(!newMobile) return
-
-await set(ref(db,"brokerMaster/"+b),newMobile)
-
-}
-
-let del=document.createElement("button")
-del.textContent="Delete"
-del.onclick=async function(){
-
-await remove(ref(db,"brokerMaster/"+b))
-
-}
-
-let td1=document.createElement("td")
-td1.appendChild(edit)
-
-let td2=document.createElement("td")
-td2.appendChild(del)
-
-tr.appendChild(td1)
-tr.appendChild(td2)
-
-bbody.appendChild(tr)
-
-}
-
-}
-
-function parseDate(str){
-
-if(!str) return null
-
-let p=str.split("/")
-
-if(p.length===3){
-
-let d=parseInt(p[0])
-let m=parseInt(p[1])-1
-let y=parseInt(p[2])
-
-if(y<100){
-if(y<50){ y=2000+y } else { y=1900+y }
-}
-
-return new Date(y,m,d)
-
-}
-
-return new Date(str)
-
-}
-
-function calcDays(dateStr){
-
-let d=parseDate(dateStr)
-
-if(!d || isNaN(d)) return ""
-
-let today=new Date()
-
-return Math.floor((today-d)/(1000*60*60*24))
-
-}
-
-document.getElementById("fileInput").addEventListener("change",function(e){
-
-let file=e.target.files[0]
-let reader=new FileReader()
-
-reader.onload=function(ev){
-
-let text=ev.target.result
-
-let delimiter=text.includes(";")?";":","
-
-let rows=text.split("\n").map(r=>r.split(delimiter))
-
-let header=rows[0].map(h=>h.trim().toLowerCase())
-
-let dateIndex=header.findIndex(h=>h.includes("date"))
-let billIndex=header.findIndex(h=>h.includes("os.id"))
-let nameIndex=header.findIndex(h=>h.includes("account"))
-let amountIndex=header.findIndex(h=>h.includes("amount"))
-
-let brokerIndex=header.findIndex(h=>
-h.includes("broker")||
-h.includes("boker")||
-h.includes("dalal")||
-h.includes("agent")
-)
-
-let tbody=document.querySelector("#dataTable tbody")
-tbody.innerHTML=""
-
-for(let i=1;i<rows.length;i++){
-
-let r=rows[i]
-
-let party=r[nameIndex]
-let bill=r[billIndex]
-let date=r[dateIndex]
-let amount=r[amountIndex]
-let broker=r[brokerIndex]
-
-let days=calcDays(date)
-
-let tr=document.createElement("tr")
-
-let pbtn=document.createElement("button")
-pbtn.textContent="Send"
-pbtn.onclick=async function(){
-
-let mobile=partyMaster[party]
-
-if(!mobile){
-mobile=prompt("Enter Party Mobile")
-if(!mobile) return
-await set(ref(db,"partyMaster/"+party),mobile)
-}
-
-send(mobile,party,bill,date,amount,days)
-
-}
-
-let bbtn=document.createElement("button")
-bbtn.textContent="Send"
-bbtn.onclick=async function(){
-
-if(!broker){
-alert("Broker not found")
-return
-}
-
-let mobile=brokerMaster[broker]
-
-if(!mobile){
-mobile=prompt("Enter Broker Mobile")
-if(!mobile) return
-await set(ref(db,"brokerMaster/"+broker),mobile)
-}
-
-send(mobile,broker,bill,date,amount,days)
-
-}
-
-tr.innerHTML="<td>"+party+"</td><td>"+bill+"</td><td>"+date+"</td><td>"+amount+"</td><td>"+days+"</td><td>"+(broker||"")+"</td>"
-
-let td1=document.createElement("td")
-td1.appendChild(pbtn)
-
-let td2=document.createElement("td")
-td2.appendChild(bbtn)
-
-tr.appendChild(td1)
-tr.appendChild(td2)
-
-tbody.appendChild(tr)
-
-}
-
-}
-
-reader.readAsText(file)
-
-})
-
-function send(mobile,name,bill,date,amount,days){
-
-let msg=`नमस्ते ${name},
+  <div id="customPrompt">
+    <div class="modal-content">
+      <h3 id="promptTitle">Enter Mobile Number</h3>
+      <input type="tel" id="promptInput" placeholder="10 Digit Number" maxlength="10" autocomplete="off">
+      <div class="modal-buttons">
+        <button id="promptCancel" class="btn-danger">Cancel</button>
+        <button id="promptSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a id="nav-reminder" class="active" onclick="showPage('reminder')">Pending Reminders</a>
+    <a id="nav-master" onclick="showPage('master')">Mobile Master</a>
+  </div>
+
+  <div id="reminderPage">
+    <div class="action-bar">
+      <div>
+        <strong>Upload CSV: </strong><br>
+        <input type="file" id="fileInput">
+      </div>
+      <button class="btn-danger" style="margin-left: auto;" onclick="clearFirebaseData()">Clear Data from Cloud</button>
+    </div>
+
+    <input type="text" id="searchBox" placeholder="Search Party Name..." onkeyup="filterTable()">
+
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Party</th>
+          <th>Bill No</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Days</th>
+          <th>Broker</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="masterPage" style="display:none">
+    <div class="master-grid">
+      <div class="master-column">
+        <h3>Party Mobile Master</h3>
+        <table id="partyTable">
+          <thead>
+            <tr>
+              <th>Party</th>
+              <th>Mobile</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="master-column">
+        <h3>Broker Mobile Master</h3>
+        <table id="brokerTable">
+          <thead>
+            <tr>
+              <th>Broker</th>
+              <th>Mobile</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDYePa9Ef2i3p68nd0Hu5biprCDIDSGZcE",
+      authDomain: "payment-reminder-76a1b.firebaseapp.com",
+      projectId: "payment-reminder-76a1b",
+      storageBucket: "payment-reminder-76a1b.firebasestorage.app",
+      messagingSenderId: "545778828368",
+      appId: "1:545778828368:web:b2e129c8a1d4d2816ffd55",
+      databaseURL: "https://payment-reminder-76a1b-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let partyMaster = {};
+    let brokerMaster = {};
+    let billData = [];
+
+    function showPage(p) {
+      document.getElementById("reminderPage").style.display = p === "reminder" ? "block" : "none";
+      document.getElementById("masterPage").style.display = p === "master" ? "block" : "none";
+
+      document.getElementById("nav-reminder").classList.toggle("active", p === "reminder");
+      document.getElementById("nav-master").classList.toggle("active", p === "master");
+
+      renderMasters();
+    }
+    window.showPage = showPage;
+
+    window.askMobileNumber = function (titleText, defaultVal = "") {
+      return new Promise((resolve) => {
+        let modal = document.getElementById('customPrompt');
+        let title = document.getElementById('promptTitle');
+        let input = document.getElementById('promptInput');
+
+        title.innerText = titleText;
+        input.value = defaultVal;
+        modal.style.display = 'flex';
+        input.focus();
+
+        document.getElementById('promptSave').onclick = () => {
+          modal.style.display = 'none';
+          resolve(input.value);
+        };
+        document.getElementById('promptCancel').onclick = () => {
+          modal.style.display = 'none';
+          resolve(null);
+        };
+      });
+    }
+
+    function loadData() {
+      onValue(ref(db, "partyMaster"), snap => { partyMaster = snap.val() || {}; renderMasters(); });
+      onValue(ref(db, "brokerMaster"), snap => { brokerMaster = snap.val() || {}; renderMasters(); });
+      onValue(ref(db, "billData"), snap => {
+        let data = snap.val();
+        billData = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+        renderTable();
+      });
+    }
+
+    function renderMasters() {
+      let pbody = document.querySelector("#partyTable tbody");
+      if (!pbody) return;
+      pbody.innerHTML = "";
+      for (let p in partyMaster) {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `<td data-label="Party">${p}</td><td data-label="Mobile">${partyMaster[p]}</td>`;
+
+        let edit = document.createElement("button"); edit.textContent = "Edit";
+        edit.onclick = async function () {
+          let newMobile = await askMobileNumber(`Edit Mobile: ${p}`, partyMaster[p]);
+          if (!newMobile) return;
+          await set(ref(db, "partyMaster/" + p), newMobile.replace(/\D/g, '').slice(-10));
+        }
+
+        let del = document.createElement("button"); del.textContent = "Delete"; del.className = "btn-danger";
+        del.onclick = async function () {
+          if (confirm("Are you sure you want to delete " + p + "?")) await remove(ref(db, "partyMaster/" + p));
+        }
+
+        let tdActions = document.createElement("td"); tdActions.className = "actions";
+        tdActions.appendChild(edit); tdActions.appendChild(del);
+        tr.appendChild(tdActions); pbody.appendChild(tr);
+      }
+
+      let bbody = document.querySelector("#brokerTable tbody");
+      if (!bbody) return;
+      bbody.innerHTML = "";
+      for (let b in brokerMaster) {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `<td data-label="Broker">${b}</td><td data-label="Mobile">${brokerMaster[b]}</td>`;
+
+        let edit = document.createElement("button"); edit.textContent = "Edit";
+        edit.onclick = async function () {
+          let newMobile = await askMobileNumber(`Edit Mobile: ${b}`, brokerMaster[b]);
+          if (!newMobile) return;
+          await set(ref(db, "brokerMaster/" + b), newMobile.replace(/\D/g, '').slice(-10));
+        }
+
+        let del = document.createElement("button"); del.textContent = "Delete"; del.className = "btn-danger";
+        del.onclick = async function () {
+          if (confirm("Are you sure you want to delete " + b + "?")) await remove(ref(db, "brokerMaster/" + b));
+        }
+
+        let tdActions = document.createElement("td"); tdActions.className = "actions";
+        tdActions.appendChild(edit); tdActions.appendChild(del);
+        tr.appendChild(tdActions); bbody.appendChild(tr);
+      }
+    }
+
+    function parseDate(str) {
+      if (!str) return null;
+      let p = str.split("/");
+      if (p.length === 3) {
+        let d = parseInt(p[0]); let m = parseInt(p[1]) - 1; let y = parseInt(p[2]);
+        if (y < 100) { y = (y < 50) ? 2000 + y : 1900 + y; }
+        return new Date(y, m, d);
+      }
+      return new Date(str);
+    }
+
+    function calcDays(dateStr) {
+      let d = parseDate(dateStr);
+      if (!d || isNaN(d)) return "";
+      let today = new Date();
+      return Math.floor((today - d) / (1000 * 60 * 60 * 24));
+    }
+
+    function parseCSVRow(text, delimiter) {
+      let regex = new RegExp(`("${'[^"]*'}"|[^${delimiter}\\n]*)(${delimiter}|\\n|$)`, 'g');
+      let matches = []; let match;
+      while (match = regex.exec(text)) {
+        if (match[1] !== undefined) {
+          let val = match[1].replace(/(^"|"$)/g, '').trim();
+          matches.push(val);
+        }
+        if (match[2] === '\n' || match[2] === '') break;
+      }
+      return matches;
+    }
+
+    function renderTable() {
+      let tbody = document.querySelector("#dataTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      if (!billData || billData.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>No data available. Please upload a CSV from PC.</td></tr>";
+        return;
+      }
+
+      billData.forEach(item => {
+        let days = calcDays(item.date);
+        let tr = document.createElement("tr");
+
+        let pbtn = document.createElement("button");
+        pbtn.textContent = "Party 💬";
+        pbtn.className = "btn-send-party";
+        pbtn.onclick = async function () {
+          let mobile = partyMaster[item.party];
+          if (!mobile) {
+            mobile = await askMobileNumber(`Enter Number for: ${item.party}`);
+            if (!mobile) return;
+            mobile = mobile.replace(/\D/g, '');
+            if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
+            if (mobile.length > 10) mobile = mobile.slice(-10);
+            await set(ref(db, "partyMaster/" + item.party), mobile);
+          }
+          send(mobile, 'party', item.party, item.party, item.bill, item.date, item.amount, days);
+        }
+
+        let bbtn = document.createElement("button");
+        bbtn.textContent = "Broker 💬";
+        bbtn.className = "btn-send-broker";
+        bbtn.onclick = async function () {
+          if (!item.broker) { alert("Broker not found for this entry"); return; }
+          let mobile = brokerMaster[item.broker];
+          if (!mobile) {
+            mobile = await askMobileNumber(`Enter Number for Broker: ${item.broker}`);
+            if (!mobile) return;
+            mobile = mobile.replace(/\D/g, '');
+            if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
+            if (mobile.length > 10) mobile = mobile.slice(-10);
+            await set(ref(db, "brokerMaster/" + item.broker), mobile);
+          }
+          send(mobile, 'broker', item.broker, item.party, item.bill, item.date, item.amount, days);
+        }
+
+        tr.innerHTML = `
+            <td data-label="Party">${item.party}</td>
+            <td data-label="Bill No">${item.bill}</td>
+            <td data-label="Date">${item.date}</td>
+            <td data-label="Amount">₹${item.amount}</td>
+            <td data-label="Pending Days">${days}</td>
+            <td data-label="Broker">${item.broker || '-'}</td>
+        `;
+
+        let tdActions = document.createElement("td");
+        tdActions.className = "actions";
+        tdActions.appendChild(pbtn);
+        tdActions.appendChild(bbtn);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("fileInput").addEventListener("change", async function (e) {
+      let file = e.target.files[0];
+      if (!file) return;
+      let reader = new FileReader();
+
+      reader.onload = async function (ev) {
+        document.querySelector("#dataTable tbody").innerHTML = "<tr><td colspan='7' style='text-align:center;'>Uploading Data to Cloud... Please wait.</td></tr>";
+
+        let text = ev.target.result;
+        let delimiter = text.includes(";") ? ";" : ",";
+        let rawRows = text.split("\n");
+        let rows = rawRows.map(r => parseCSVRow(r.trim(), delimiter));
+
+        if (rows.length < 1) return;
+
+        let header = rows[0].map(h => h.toLowerCase());
+        let dateIndex = header.findIndex(h => h.includes("date"));
+        let billIndex = header.findIndex(h => h.includes("os.id"));
+        let nameIndex = header.findIndex(h => h.includes("account") || h.includes("party"));
+        let amountIndex = header.findIndex(h => h.includes("amount"));
+        let brokerIndex = header.findIndex(h => h.includes("broker") || h.includes("boker") || h.includes("dalal") || h.includes("agent"));
+
+        let newBillData = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          let r = rows[i];
+          if (!r || r.length < 4 || !r[nameIndex]) continue;
+
+          newBillData.push({
+            party: r[nameIndex],
+            bill: r[billIndex],
+            date: r[dateIndex],
+            amount: r[amountIndex],
+            broker: r[brokerIndex] || ""
+          });
+        }
+
+        await set(ref(db, "billData"), newBillData);
+        alert("Data successfully uploaded to Cloud!");
+        document.getElementById("fileInput").value = "";
+      }
+      reader.readAsText(file);
+    });
+
+    window.send = function (mobile, type, receiverName, partyName, bill, date, amount, days) {
+      let msg = "";
+      let formattedAmount = parseFloat(amount.replace(/,/g, '')).toFixed(2);
+
+      if (type === 'broker') {
+        msg = `नमस्ते ${receiverName},
+
+हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पार्टी के पेमेंट का रिमाइंडर है। कृपया इस पार्टी से पेमेंट करवाने का निवेदन करें:
+
+पार्टी का नाम: ${partyName}
+बिल नं: ${bill}
+दिनांक: ${date}
+राशि: ₹${formattedAmount}
+
+यह भुगतान ${days} दिनों से लंबित है।
+
+------------------
+Bank: SBI
+A/c No: 32837750647
+IFSC: SBIN0031978
+
+UPI: 9887938518@YBL
+------------------
+
+धन्यवाद,
+RAVI KUMAR DEEPAK KUMAR`;
+
+      } else {
+        msg = `नमस्ते ${receiverName},
 
 हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पेमेंट रिमाइंडर है।
 
 आपका बिल नं: ${bill}
 दिनांक: ${date}
-राशि: ₹${parseFloat(amount).toFixed(2)}
+राशि: ₹${formattedAmount}
 
 यह भुगतान ${days} दिनों से लंबित है। कृपया नीचे दी गई डिटेल्स पर तुरंत भुगतान करें:
 
@@ -400,31 +671,31 @@ UPI: 9887938518@YBL
 ------------------
 
 धन्यवाद,
-RAVI KUMAR DEEPAK KUMAR`
+RAVI KUMAR DEEPAK KUMAR`;
+      }
 
-window.open("https://wa.me/91"+mobile+"?text="+encodeURIComponent(msg))
+      window.open("https://wa.me/91" + mobile + "?text=" + encodeURIComponent(msg));
+    }
 
-}
+    window.filterTable = function () {
+      let input = document.getElementById("searchBox").value.toLowerCase();
+      let rows = document.querySelectorAll("#dataTable tbody tr");
+      rows.forEach(r => {
+        let party = r.children[0].innerText.toLowerCase();
+        r.style.display = party.includes(input) ? "" : "none";
+      });
+    }
 
-function filterTable(){
+    window.clearFirebaseData = async function () {
+      if (confirm("Are you sure you want to clear all bill data from Cloud? It will be removed from all devices.")) {
+        await remove(ref(db, "billData"));
+        alert("Data Cleared!");
+      }
+    }
 
-let input=document.getElementById("searchBox").value.toLowerCase()
+    loadData();
 
-let rows=document.querySelectorAll("#dataTable tbody tr")
-
-rows.forEach(r=>{
-
-let party=r.children[0].innerText.toLowerCase()
-
-r.style.display=party.includes(input)?"":"none"
-
-})
-
-}
-
-loadMasters()
-
-</script>
-
+  </script>
 </body>
+
 </html>
