@@ -1,0 +1,430 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Reminder Tool (Firebase)</title>
+
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:15px}
+.nav a{margin-right:15px;font-weight:bold;text-decoration:none}
+
+table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
+th,td{border-bottom:1px solid #ddd;padding:8px;text-align:left}
+
+button{
+padding:6px 10px;
+background:#0b79d0;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer
+}
+
+button:hover{background:#095a9c}
+
+input{
+padding:6px;
+margin:5px 0;
+width:260px
+}
+
+/* Mobile responsive */
+@media(max-width:700px){
+
+table, thead, tbody, th, td, tr{
+display:block;
+width:100%;
+}
+
+thead{
+display:none;
+}
+
+tr{
+background:#fff;
+margin-bottom:12px;
+padding:10px;
+border-radius:8px;
+box-shadow:0 2px 5px rgba(0,0,0,0.1)
+}
+
+td{
+border:none;
+padding:4px 0;
+}
+
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+<a href="#" onclick="showPage('reminder')">Reminder</a>
+<a href="#" onclick="showPage('master')">Mobile Master</a>
+</div>
+
+<div id="reminderPage">
+
+<h2>Upload CSV</h2>
+<input type="file" id="fileInput">
+
+<br>
+<input type="text" id="searchBox" placeholder="Search Party..." onkeyup="filterTable()">
+
+<table id="dataTable">
+<thead>
+<tr>
+<th>Party</th>
+<th>Bill</th>
+<th>Date</th>
+<th>Amount</th>
+<th>Days</th>
+<th>Broker</th>
+<th>Party</th>
+<th>Broker</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+
+<div id="masterPage" style="display:none">
+
+<h3>Party Mobile Master</h3>
+<table id="partyTable">
+<thead>
+<tr><th>Party</th><th>Mobile</th><th>Edit</th><th>Delete</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<h3>Broker Mobile Master</h3>
+<table id="brokerTable">
+<thead>
+<tr><th>Broker</th><th>Mobile</th><th>Edit</th><th>Delete</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDYePa9Ef2i3p68nd0Hu5biprCDIDSGZcE",
+  authDomain: "payment-reminder-76a1b.firebaseapp.com",
+  projectId: "payment-reminder-76a1b",
+  storageBucket: "payment-reminder-76a1b.firebasestorage.app",
+  messagingSenderId: "545778828368",
+  appId: "1:545778828368:web:b2e129c8a1d4d2816ffd55",
+  databaseURL: "https://payment-reminder-76a1b-default-rtdb.firebaseio.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let partyMaster = {}
+let brokerMaster = {}
+
+function showPage(p){
+document.getElementById("reminderPage").style.display = p=="reminder"?"block":"none"
+document.getElementById("masterPage").style.display = p=="master"?"block":"none"
+renderMasters()
+}
+
+function loadMasters(){
+
+onValue(ref(db,"partyMaster"),snap=>{
+partyMaster = snap.val() || {}
+renderMasters()
+})
+
+onValue(ref(db,"brokerMaster"),snap=>{
+brokerMaster = snap.val() || {}
+renderMasters()
+})
+
+}
+
+function renderMasters(){
+
+let pbody=document.querySelector("#partyTable tbody")
+pbody.innerHTML=""
+
+for(let p in partyMaster){
+
+let tr=document.createElement("tr")
+
+tr.innerHTML="<td>"+p+"</td><td>"+partyMaster[p]+"</td>"
+
+let edit=document.createElement("button")
+edit.textContent="Edit"
+edit.onclick=async function(){
+
+let newMobile=prompt("Edit mobile",partyMaster[p])
+if(!newMobile) return
+
+await set(ref(db,"partyMaster/"+p),newMobile)
+
+}
+
+let del=document.createElement("button")
+del.textContent="Delete"
+del.onclick=async function(){
+
+await remove(ref(db,"partyMaster/"+p))
+
+}
+
+let td1=document.createElement("td")
+td1.appendChild(edit)
+
+let td2=document.createElement("td")
+td2.appendChild(del)
+
+tr.appendChild(td1)
+tr.appendChild(td2)
+
+pbody.appendChild(tr)
+
+}
+
+
+let bbody=document.querySelector("#brokerTable tbody")
+bbody.innerHTML=""
+
+for(let b in brokerMaster){
+
+let tr=document.createElement("tr")
+
+tr.innerHTML="<td>"+b+"</td><td>"+brokerMaster[b]+"</td>"
+
+let edit=document.createElement("button")
+edit.textContent="Edit"
+edit.onclick=async function(){
+
+let newMobile=prompt("Edit mobile",brokerMaster[b])
+if(!newMobile) return
+
+await set(ref(db,"brokerMaster/"+b),newMobile)
+
+}
+
+let del=document.createElement("button")
+del.textContent="Delete"
+del.onclick=async function(){
+
+await remove(ref(db,"brokerMaster/"+b))
+
+}
+
+let td1=document.createElement("td")
+td1.appendChild(edit)
+
+let td2=document.createElement("td")
+td2.appendChild(del)
+
+tr.appendChild(td1)
+tr.appendChild(td2)
+
+bbody.appendChild(tr)
+
+}
+
+}
+
+function parseDate(str){
+
+if(!str) return null
+
+let p=str.split("/")
+
+if(p.length===3){
+
+let d=parseInt(p[0])
+let m=parseInt(p[1])-1
+let y=parseInt(p[2])
+
+if(y<100){
+if(y<50){ y=2000+y } else { y=1900+y }
+}
+
+return new Date(y,m,d)
+
+}
+
+return new Date(str)
+
+}
+
+function calcDays(dateStr){
+
+let d=parseDate(dateStr)
+
+if(!d || isNaN(d)) return ""
+
+let today=new Date()
+
+return Math.floor((today-d)/(1000*60*60*24))
+
+}
+
+document.getElementById("fileInput").addEventListener("change",function(e){
+
+let file=e.target.files[0]
+let reader=new FileReader()
+
+reader.onload=function(ev){
+
+let text=ev.target.result
+
+let delimiter=text.includes(";")?";":","
+
+let rows=text.split("\n").map(r=>r.split(delimiter))
+
+let header=rows[0].map(h=>h.trim().toLowerCase())
+
+let dateIndex=header.findIndex(h=>h.includes("date"))
+let billIndex=header.findIndex(h=>h.includes("os.id"))
+let nameIndex=header.findIndex(h=>h.includes("account"))
+let amountIndex=header.findIndex(h=>h.includes("amount"))
+
+let brokerIndex=header.findIndex(h=>
+h.includes("broker")||
+h.includes("boker")||
+h.includes("dalal")||
+h.includes("agent")
+)
+
+let tbody=document.querySelector("#dataTable tbody")
+tbody.innerHTML=""
+
+for(let i=1;i<rows.length;i++){
+
+let r=rows[i]
+
+let party=r[nameIndex]
+let bill=r[billIndex]
+let date=r[dateIndex]
+let amount=r[amountIndex]
+let broker=r[brokerIndex]
+
+let days=calcDays(date)
+
+let tr=document.createElement("tr")
+
+let pbtn=document.createElement("button")
+pbtn.textContent="Send"
+pbtn.onclick=async function(){
+
+let mobile=partyMaster[party]
+
+if(!mobile){
+mobile=prompt("Enter Party Mobile")
+if(!mobile) return
+await set(ref(db,"partyMaster/"+party),mobile)
+}
+
+send(mobile,party,bill,date,amount,days)
+
+}
+
+let bbtn=document.createElement("button")
+bbtn.textContent="Send"
+bbtn.onclick=async function(){
+
+if(!broker){
+alert("Broker not found")
+return
+}
+
+let mobile=brokerMaster[broker]
+
+if(!mobile){
+mobile=prompt("Enter Broker Mobile")
+if(!mobile) return
+await set(ref(db,"brokerMaster/"+broker),mobile)
+}
+
+send(mobile,broker,bill,date,amount,days)
+
+}
+
+tr.innerHTML="<td>"+party+"</td><td>"+bill+"</td><td>"+date+"</td><td>"+amount+"</td><td>"+days+"</td><td>"+(broker||"")+"</td>"
+
+let td1=document.createElement("td")
+td1.appendChild(pbtn)
+
+let td2=document.createElement("td")
+td2.appendChild(bbtn)
+
+tr.appendChild(td1)
+tr.appendChild(td2)
+
+tbody.appendChild(tr)
+
+}
+
+}
+
+reader.readAsText(file)
+
+})
+
+function send(mobile,name,bill,date,amount,days){
+
+let msg=`नमस्ते ${name},
+
+हमारी फर्म RAVI KUMAR DEEPAK KUMAR की तरफ से यह पेमेंट रिमाइंडर है।
+
+आपका बिल नं: ${bill}
+दिनांक: ${date}
+राशि: ₹${parseFloat(amount).toFixed(2)}
+
+यह भुगतान ${days} दिनों से लंबित है। कृपया नीचे दी गई डिटेल्स पर तुरंत भुगतान करें:
+
+------------------
+Bank: SBI
+A/c No: 32837750647
+IFSC: SBIN0031978
+
+UPI: 9887938518@YBL
+------------------
+
+धन्यवाद,
+RAVI KUMAR DEEPAK KUMAR`
+
+window.open("https://wa.me/91"+mobile+"?text="+encodeURIComponent(msg))
+
+}
+
+function filterTable(){
+
+let input=document.getElementById("searchBox").value.toLowerCase()
+
+let rows=document.querySelectorAll("#dataTable tbody tr")
+
+rows.forEach(r=>{
+
+let party=r.children[0].innerText.toLowerCase()
+
+r.style.display=party.includes(input)?"":"none"
+
+})
+
+}
+
+loadMasters()
+
+</script>
+
+</body>
+</html>
