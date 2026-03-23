@@ -779,25 +779,49 @@
 
         if (rows.length < 1) return;
 
-        let header = rows[0].map(h => h.toLowerCase());
+        // NAYA LOGIC: Sahi Header (Heading) line ko dhundhna
+        let headerIndex = -1;
+        let header = [];
+
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i] && rows[i].length > 3) {
+            let tempHeader = rows[i].map(h => h ? h.toLowerCase().trim() : "");
+            // Agar line mein 'account' ya 'party' likha hai, toh wahi hamara asali header hai
+            if (tempHeader.some(h => h.includes("account") || h.includes("party"))) {
+              headerIndex = i;
+              header = tempHeader;
+              break;
+            }
+          }
+        }
+
+        if (headerIndex === -1) {
+          alert("Error: File mein 'Account Name' ya 'Party' jaisa koi column nahi mila.");
+          document.querySelector("#dataTable tbody").innerHTML = "<tr><td colspan='5' style='text-align:center;'>Upload Failed. Format Incorrect.</td></tr>";
+          return;
+        }
+
         let dateIndex = header.findIndex(h => h.includes("date"));
-        let billIndex = header.findIndex(h => h.includes("os.id"));
+        let billIndex = header.findIndex(h => h.includes("os.id") || h.includes("bill"));
         let nameIndex = header.findIndex(h => h.includes("account") || h.includes("party"));
         let amountIndex = header.findIndex(h => h.includes("amount"));
         let brokerIndex = header.findIndex(h => h.includes("broker") || h.includes("boker") || h.includes("dalal") || h.includes("agent"));
 
         let newBillData = [];
 
-        for (let i = 1; i < rows.length; i++) {
+        // Data ko Header ke theek baad wali line se padhna shuru karein
+        for (let i = headerIndex + 1; i < rows.length; i++) {
           let r = rows[i];
-          if (!r || r.length < 4 || !r[nameIndex]) continue;
+
+          // Agar line khaali hai, ya usme "-------" design hai, toh use chhod do (skip)
+          if (!r || r.length < 4 || !r[nameIndex] || r[nameIndex].includes("---")) continue;
 
           newBillData.push({
-            party: r[nameIndex],
-            bill: r[billIndex],
-            date: r[dateIndex],
-            amount: r[amountIndex],
-            broker: r[brokerIndex] || ""
+            party: r[nameIndex].trim(),
+            bill: r[billIndex] ? r[billIndex].trim() : "",
+            date: r[dateIndex] ? r[dateIndex].trim() : "",
+            amount: r[amountIndex] ? r[amountIndex].trim() : "0",
+            broker: r[brokerIndex] ? r[brokerIndex].trim() : ""
           });
         }
 
