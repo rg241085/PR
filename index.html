@@ -718,7 +718,7 @@
       }
     }
 
-    async function sendSelectedBills(partyName, brokerName, type, safeKey, allBills) {
+   async function sendSelectedBills(partyName, brokerName, type, safeKey, allBills) {
       let checkboxes = document.querySelectorAll(`.chk-${safeKey}:checked`);
 
       if (checkboxes.length === 0) {
@@ -737,30 +737,40 @@
         if (!isNaN(amt)) selectedTotal += amt;
       });
 
+      // 🔥 Firebase के लिए नाम को सेफ बनाना (Special characters हटाना)
+      let safePartyKey = partyName.replace(/[.#$\[\]/]/g, "_"); 
+      let safeBrokerKey = brokerName ? brokerName.replace(/[.#$\[\]/]/g, "_") : "";
+
       let mobile = "";
-      if (type === 'party') {
-        mobile = partyMaster[partyName];
-        if (!mobile) {
-          mobile = await askMobileNumber(`Enter Number for: ${partyName}`);
-          if (!mobile) return;
-          mobile = mobile.replace(/\D/g, '');
-          if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
-          if (mobile.length > 10) mobile = mobile.slice(-10);
-          await set(ref(db, "partyMaster/" + partyName), mobile);
-        }
-        sendToWhatsApp(mobile, type, partyName, partyName, selectedBills, selectedTotal);
-      } else {
-        if (!brokerName) { alert("Broker not found for this entry"); return; }
-        mobile = brokerMaster[brokerName];
-        if (!mobile) {
-          mobile = await askMobileNumber(`Enter Number for Broker: ${brokerName}`);
-          if (!mobile) return;
-          mobile = mobile.replace(/\D/g, '');
-          if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
-          if (mobile.length > 10) mobile = mobile.slice(-10);
-          await set(ref(db, "brokerMaster/" + brokerName), mobile);
-        }
-        sendToWhatsApp(mobile, type, brokerName, partyName, selectedBills, selectedTotal);
+      try {
+          if (type === 'party') {
+            mobile = partyMaster[safePartyKey] || partyMaster[partyName]; // पुराने नाम भी चेक करेगा
+            if (!mobile) {
+              mobile = await askMobileNumber(`Enter Number for: ${partyName}`);
+              if (!mobile) return;
+              mobile = mobile.replace(/\D/g, '');
+              if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
+              if (mobile.length > 10) mobile = mobile.slice(-10);
+              await set(ref(db, "partyMaster/" + safePartyKey), mobile);
+            }
+            sendToWhatsApp(mobile, type, partyName, partyName, selectedBills, selectedTotal);
+            
+          } else {
+            if (!brokerName) { alert("Broker not found for this entry"); return; }
+            mobile = brokerMaster[safeBrokerKey] || brokerMaster[brokerName];
+            if (!mobile) {
+              mobile = await askMobileNumber(`Enter Number for Broker: ${brokerName}`);
+              if (!mobile) return;
+              mobile = mobile.replace(/\D/g, '');
+              if (mobile.length < 10) { alert("कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।"); return; }
+              if (mobile.length > 10) mobile = mobile.slice(-10);
+              await set(ref(db, "brokerMaster/" + safeBrokerKey), mobile);
+            }
+            sendToWhatsApp(mobile, type, brokerName, partyName, selectedBills, selectedTotal);
+          }
+      } catch (error) {
+          alert("नंबर सेव करने में दिक्कत आई: " + error.message);
+          console.error(error);
       }
     }
 
